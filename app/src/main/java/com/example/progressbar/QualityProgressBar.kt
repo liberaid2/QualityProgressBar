@@ -83,9 +83,11 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         requestLayout()
     }
 
+    /* Everything is inside this rectangle */
     private val drawRect = RectF()
     private var sweepAngle = 0f
 
+    /* Erases hole in center of arcs */
     private val eraser = Paint()
     private val paint = Paint().apply {
         style = Paint.Style.STROKE
@@ -102,7 +104,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
 
     init {
         eraser.apply {
-            color = Color.WHITE
+            color = bgColor
         }
 
         arcs = (0 until MAX_ARCS).map {
@@ -127,12 +129,17 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         }
     }
 
+    /**
+     * Starts animation of progressBar, cancels previous animation if needed
+     * */
     fun animateArc() {
+        /* Cancel previous animation, setup default parameters */
         qualityAnimators.forEach { it.second.cancel() }
         qualityAnimators.clear()
         arcs.forEach { it.color = colorUnspecified }
         progressAnimationEnded = false
 
+        /* Animate sweepAngle */
         ValueAnimator.ofFloat(0f, 360f).apply {
             duration = totalAnimationDuration
             interpolator = LinearInterpolator()
@@ -140,6 +147,8 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
                 sweepAngle = it.animatedValue as Float
                 invalidate()
             }
+
+            /* OnEnd: Delegate invalidation process to color animators */
             addListener(onEnd = {
                 qualityAnimators.lastOrNull()?.second?.addUpdateListener { invalidate() }
                 progressAnimationEnded = true
@@ -148,7 +157,9 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         }
     }
 
-    fun setQuality(fromMillis: Long, toMillis: Long, quality: Quality): Boolean {
+    fun setQualitySecs(fromSec: Int, toSec: Long, quality: Quality) = setQualityMillis(fromSec * 1000L, toSec * 1000L, quality)
+
+    fun setQualityMillis(fromMillis: Long, toMillis: Long, quality: Quality): Boolean {
         val fromDeg = (fromMillis.toFloat() / totalAnimationDuration * 360f).toInt()
         val toDeg = (toMillis.toFloat() / totalAnimationDuration * 360f).toInt()
 
@@ -159,12 +170,14 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         if(fromDeg < 0 || toDeg > 360)
             return false
 
+        /* Dont change quality color if target has already changed color */
         qualityAnimators.forEach { (coloredArc, _) ->
             val range = coloredArc.fromDeg until coloredArc.toDeg
             if(fromDeg in range || toDeg in range)
                 return false
         }
 
+        /* Store animated arcs & valueAnimator of these arcs */
         qualityAnimators.add(ColoredArc(fromDeg, toDeg) to ValueAnimator.ofFloat(0f, 1f).apply {
             duration = recolorAnimationDuration
             interpolator = DecelerateInterpolator()
@@ -196,6 +209,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
     override fun onDraw(canvas: Canvas?) {
         val minSide = min(width, height)
 
+        /* Calculate workspace square */
         val side = minSide.toFloat()
         val (x, y) = if(minSide == width) {
             0f to (height / 2f - side / 2)
@@ -203,10 +217,12 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
 
         drawRect.set(x + marginStart + paddingStart, y + marginTop + paddingTop, x + side - marginEnd - paddingEnd, y + side - marginBottom - paddingBottom)
 
+        /* Clear canvas */
         canvas?.drawColor(Color.WHITE)
 
         paint.color = colorUnspecified
 
+        /* Draw arcs */
         arcs.forEach { arc ->
             val diff = sweepAngle - arc.startDeg
             if(diff > 0){
@@ -215,6 +231,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
             }
         }
 
+        /* Clear center circle */
         canvas?.drawCircle(x + side / 2f, y + side / 2f, side / 2f - strokeWidth, eraser)
 
         if(!calculatedTextSize)
@@ -223,6 +240,13 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         canvas?.drawText(text, x + side / 2f - textBounds.width() / 2, y + side / 2f + textBounds.height() / 2, textPaint)
     }
 
+    /**
+     * Calculates size of text to perfect fit in progress circle
+     * Stores result in [textBounds]
+     *
+     * @param x - x-center of progress circle
+     * @param y - y-center of progress circle
+     * */
     private fun calculateTextSize(x: Float, y: Float){
         val offset = 20f
         val targetWidth = min(width, height)
@@ -235,11 +259,15 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         do {
             textPaint.getTextBounds(text, 0, text.length, textBounds)
 
+            /* (x1, y1) - top-left corner of textBounds rect in canvas coordinates */
             val x1 = x + targetWidth / 2f - textBounds.width() / 2
             val y1 = y + targetWidth / 2f + textBounds.height() / 2
+            /* (x2, y2) - right-bottom corner of textBounds rect in canvas coordinates */
+            /* diff - the farthest distance between textBounds corners and progress circle */
             diff = calculateMaxRadius(x1, y1, x1 + textBounds.width(), y1 - textBounds.height(),
                 x + targetWidth / 2f, y + targetWidth / 2f) - (targetWidth / 2f - strokeWidth) + offset
 
+            /* Binary-search approach */
             if(diff > 0f){
                 lastTextSize = textPaint.textSize
                 textPaint.textSize /= 2
@@ -276,12 +304,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
 
     private data class ColoredArc(val fromDeg: Int, val toDeg: Int)
 
-    enum class Quality{
-        GOOD,
-        MEDIUM,
-        BAD,
-        UNSPECIFIED
-    }
+    enum class Quality{GOOD, MEDIUM, BAD, UNSPECIFIED}
 
     private class Arc(val startDeg: Float, val maxAngle: Float, val paint: Paint, var color: Int){
         var sweepAngle = 0f

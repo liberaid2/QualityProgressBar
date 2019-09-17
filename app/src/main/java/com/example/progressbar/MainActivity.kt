@@ -1,7 +1,6 @@
 package com.example.progressbar
 
 import android.os.Bundle
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.*
@@ -23,7 +22,7 @@ class MainActivity : AppCompatActivity() {
                 val step = qualityProgressBar.totalAnimationDuration / times
                 repeat(times){
                     delay(step)
-                    qualityProgressBar.setQuality(it * step, (it + 1) * step, QualityProgressBar.Quality.values()[currentColor++ % 3])
+                    qualityProgressBar.setQualityMillis(it * step, (it + 1) * step, QualityProgressBar.Quality.values()[currentColor++ % 3])
                 }
             }
         }
