@@ -103,10 +103,6 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
     private var calculatedTextSize = false
 
     init {
-        eraser.apply {
-            color = bgColor
-        }
-
         arcs = (0 until MAX_ARCS).map {
             Arc(it * ARC_STEP.toFloat(), ARC_STEP.toFloat(), paint, colorUnspecified)
         }
@@ -127,6 +123,8 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
                 recycle()
             }
         }
+
+        eraser.color = bgColor
     }
 
     /**
@@ -221,6 +219,10 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         canvas?.drawColor(Color.WHITE)
 
         paint.color = colorUnspecified
+        paint.apply {
+            style = Paint.Style.STROKE
+            strokeCap = Paint.Cap.ROUND
+        }
 
         /* Draw arcs */
         arcs.forEach { arc ->
