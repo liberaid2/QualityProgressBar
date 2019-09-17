@@ -15,6 +15,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_margin="8dp"
+        android:padding="8dp"
         app:text="Hello, world!"
         app:textSize="36sp"
         app:totalAnimationDuration="2000"

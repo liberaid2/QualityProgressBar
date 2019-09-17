@@ -8,5 +8,9 @@
         <attr name="text" format="string"/>
         <attr name="textColor" format="color"/>
         <attr name="textSize" format="dimension"/>
+        <attr name="colorGood" format="color"/>
+        <attr name="colorMedium" format="color"/>
+        <attr name="colorBad" format="color"/>
+        <attr name="colorUnspecified" format="color"/>
     </declare-styleable>
 </resources>

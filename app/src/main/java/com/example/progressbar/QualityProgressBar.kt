@@ -46,6 +46,39 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
     }
 
     var text = ""
+    set(value) {
+        field = value
+        invalidate()
+        requestLayout()
+    }
+
+    var colorGood: Int = Color.GREEN
+    set(value) {
+        field = value
+        invalidate()
+        requestLayout()
+    }
+
+    var colorMedium: Int = Color.YELLOW
+    set(value) {
+        field = value
+        invalidate()
+        requestLayout()
+    }
+
+    var colorBad: Int = Color.RED
+    set(value){
+        field = value
+        invalidate()
+        requestLayout()
+    }
+
+    var colorUnspecified: Int = Color.GRAY
+    set(value) {
+        field = value
+        invalidate()
+        requestLayout()
+    }
 
     private val drawRect = RectF()
     private var sweepAngle = 0f
@@ -58,7 +91,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
     private val textPaint = Paint()
     private val textBounds = Rect()
 
-    private val qualityInterpolators = mutableListOf<QualityInterpolator>()
+    private val qualityAnimators = mutableListOf<Pair<ColoredArc, ValueAnimator>>()
     private val arcs: List<Arc>
 
     private var progressAnimationEnded = false
@@ -69,7 +102,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         }
 
         arcs = (0 until MAX_ARCS).map {
-            Arc(it * ARC_STEP.toFloat(), ARC_STEP.toFloat(), paint)
+            Arc(it * ARC_STEP.toFloat(), ARC_STEP.toFloat(), paint, colorUnspecified)
         }
 
         context.theme.obtainStyledAttributes(attrs, R.styleable.QualityProgressBar, 0, 0).apply {
@@ -81,6 +114,10 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
                 textPaint.color = getColor(R.styleable.QualityProgressBar_textColor, Color.DKGRAY)
                 textPaint.textSize = getDimension(R.styleable.QualityProgressBar_textSize, 25f)
                 text = getString(R.styleable.QualityProgressBar_text) ?: ""
+                colorGood = getColor(R.styleable.QualityProgressBar_colorGood, Color.GREEN)
+                colorMedium = getColor(R.styleable.QualityProgressBar_colorMedium, Color.YELLOW)
+                colorBad = getColor(R.styleable.QualityProgressBar_colorBad, Color.RED)
+                colorUnspecified = getColor(R.styleable.QualityProgressBar_colorUnspecified, Color.GRAY)
             } finally {
                 recycle()
             }
@@ -88,9 +125,9 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
     }
 
     fun animateArc() {
-        qualityInterpolators.forEach { it.animation.cancel() }
-        qualityInterpolators.clear()
-        arcs.forEach { it.color = QualityColors.UNSPECIFIED.rbg }
+        qualityAnimators.forEach { it.second.cancel() }
+        qualityAnimators.clear()
+        arcs.forEach { it.color = colorUnspecified }
         progressAnimationEnded = false
 
         ValueAnimator.ofFloat(0f, 360f).apply {
@@ -101,33 +138,41 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
                 invalidate()
             }
             addListener(onEnd = {
-                qualityInterpolators.lastOrNull()?.animation?.addUpdateListener { invalidate() }
+                qualityAnimators.lastOrNull()?.second?.addUpdateListener { invalidate() }
                 progressAnimationEnded = true
             })
             start()
         }
     }
 
-    fun setQuality(fromMillis: Long, toMillis: Long, quality: QualityColors): Boolean {
+    fun setQuality(fromMillis: Long, toMillis: Long, quality: Quality): Boolean {
         val fromDeg = (fromMillis.toFloat() / totalAnimationDuration * 360f).toInt()
         val toDeg = (toMillis.toFloat() / totalAnimationDuration * 360f).toInt()
 
         return setQualityDeg(fromDeg, toDeg, quality)
     }
 
-    fun setQualityDeg(fromDeg: Int, toDeg: Int, quality: QualityColors): Boolean {
+    fun setQualityDeg(fromDeg: Int, toDeg: Int, quality: Quality): Boolean {
         if(fromDeg < 0 || toDeg > 360)
             return false
 
-        qualityInterpolators.forEach {
-            val range = it.fromDeg until it.toDeg
+        qualityAnimators.forEach { (coloredArc, _) ->
+            val range = coloredArc.fromDeg until coloredArc.toDeg
             if(fromDeg in range || toDeg in range)
                 return false
         }
 
-        qualityInterpolators.add(QualityInterpolator(fromDeg, toDeg, quality, recolorAnimationDuration, arcs).apply {
-            if(progressAnimationEnded)
-                animation.addUpdateListener { invalidate() }
+        qualityAnimators.add(ColoredArc(fromDeg, toDeg) to ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = recolorAnimationDuration
+            interpolator = DecelerateInterpolator()
+            addUpdateListener {
+                for(i in fromDeg until toDeg)
+                    arcs[i].color = argbEvaluator.evaluate(it.animatedFraction, colorUnspecified, getColorByQuality(quality)) as Int
+
+                if(progressAnimationEnded)
+                    invalidate()
+            }
+            start()
         })
 
         return true
@@ -157,7 +202,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
 
         canvas?.drawColor(Color.WHITE)
 
-        paint.color = QualityColors.UNSPECIFIED.rbg
+        paint.color = colorUnspecified
 
         arcs.forEach { arc ->
             val diff = sweepAngle - arc.startDeg
@@ -173,21 +218,23 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         canvas?.drawText(text, x + side / 2f - textBounds.width() / 2, y + side / 2f + textBounds.height() / 2, textPaint)
     }
 
-    private data class QualityInterpolator(val fromDeg: Int, val toDeg: Int, val quality: QualityColors,
-                                           val animationDuration: Long, val arcs: List<Arc>){
-        val animation = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = animationDuration
-            interpolator = DecelerateInterpolator()
-            addUpdateListener {
-                for(i in fromDeg until toDeg)
-                    arcs[i].color = argbEvaluator.evaluate(it.animatedFraction, QualityColors.UNSPECIFIED.rbg, quality.rbg) as Int
-            }
-            start()
-        }
+    private fun getColorByQuality(quality: Quality): Int = when(quality) {
+        Quality.GOOD -> colorGood
+        Quality.MEDIUM -> colorMedium
+        Quality.BAD -> colorBad
+        Quality.UNSPECIFIED -> colorUnspecified
     }
 
-    private class Arc(val startDeg: Float, val maxAngle: Float, val paint: Paint){
-        var color = QualityColors.UNSPECIFIED.rbg
+    private data class ColoredArc(val fromDeg: Int, val toDeg: Int)
+
+    enum class Quality{
+        GOOD,
+        MEDIUM,
+        BAD,
+        UNSPECIFIED
+    }
+
+    private class Arc(val startDeg: Float, val maxAngle: Float, val paint: Paint, var color: Int){
         var sweepAngle = 0f
         set(value){
             if(value < 0f)
@@ -208,12 +255,5 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
 
         const val MAX_ARCS = 360
         const val ARC_STEP = MAX_ARCS / 360
-    }
-
-    enum class QualityColors(val rbg: Int) {
-        GOOD(Color.GREEN),
-        MEDIUM(Color.YELLOW),
-        BAD(Color.RED),
-        UNSPECIFIED(Color.GRAY)
     }
 }
