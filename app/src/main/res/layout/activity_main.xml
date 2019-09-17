@@ -16,8 +16,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_margin="8dp"
         android:padding="8dp"
-        app:text="Hello, world!"
-        app:textSize="36sp"
+        app:text="The very very very very very very large text"
         app:totalAnimationDuration="2000"
         app:recolorAnimationDuration="200"
         app:strokeWidth="50dp"/>

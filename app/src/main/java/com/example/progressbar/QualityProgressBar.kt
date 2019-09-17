@@ -13,6 +13,8 @@ import androidx.core.view.marginBottom
 import androidx.core.view.marginEnd
 import androidx.core.view.marginStart
 import androidx.core.view.marginTop
+import kotlin.math.abs
+import kotlin.math.max
 import kotlin.math.min
 
 class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, attrs) {
@@ -48,6 +50,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
     var text = ""
     set(value) {
         field = value
+        calculatedTextSize = false
         invalidate()
         requestLayout()
     }
@@ -95,6 +98,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
     private val arcs: List<Arc>
 
     private var progressAnimationEnded = false
+    private var calculatedTextSize = false
 
     init {
         eraser.apply {
@@ -112,7 +116,6 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
                 recolorAnimationDuration = getInteger(R.styleable.QualityProgressBar_recolorAnimationDuration, 500).toLong()
                 bgColor = getColor(R.styleable.QualityProgressBar_bgColor, Color.WHITE)
                 textPaint.color = getColor(R.styleable.QualityProgressBar_textColor, Color.DKGRAY)
-                textPaint.textSize = getDimension(R.styleable.QualityProgressBar_textSize, 25f)
                 text = getString(R.styleable.QualityProgressBar_text) ?: ""
                 colorGood = getColor(R.styleable.QualityProgressBar_colorGood, Color.GREEN)
                 colorMedium = getColor(R.styleable.QualityProgressBar_colorMedium, Color.YELLOW)
@@ -214,8 +217,54 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
 
         canvas?.drawCircle(x + side / 2f, y + side / 2f, side / 2f - strokeWidth, eraser)
 
-        textPaint.getTextBounds(text, 0, text.length, textBounds)
+        if(!calculatedTextSize)
+            calculateTextSize(x, y)
+
         canvas?.drawText(text, x + side / 2f - textBounds.width() / 2, y + side / 2f + textBounds.height() / 2, textPaint)
+    }
+
+    private fun calculateTextSize(x: Float, y: Float){
+        val offset = 20f
+        val targetWidth = min(width, height)
+
+        var lastTextSize = 10000f
+        textPaint.textSize = 1000f
+
+        var diff: Float
+
+        do {
+            textPaint.getTextBounds(text, 0, text.length, textBounds)
+
+            val x1 = x + targetWidth / 2f - textBounds.width() / 2
+            val y1 = y + targetWidth / 2f + textBounds.height() / 2
+            diff = calculateMaxRadius(x1, y1, x1 + textBounds.width(), y1 - textBounds.height(),
+                x + targetWidth / 2f, y + targetWidth / 2f) - (targetWidth / 2f - strokeWidth) + offset
+
+            if(diff > 0f){
+                lastTextSize = textPaint.textSize
+                textPaint.textSize /= 2
+            } else if (diff < -10f) {
+                val current = textPaint.textSize
+                textPaint.textSize += abs(lastTextSize - current) / 2f
+                lastTextSize = current
+            }
+        } while(diff > 0f || diff < -10f)
+
+        calculatedTextSize = true
+    }
+
+    private fun calculateMaxRadius(x1: Float, y1: Float, x2: Float, y2: Float, cx: Float, cy: Float): Float {
+        var diff1 = (cx - x1).toDouble()
+        var diff2 = (cy - y1).toDouble()
+
+        val distance1 = Math.sqrt(diff1 * diff1 + diff2 * diff2)
+
+        diff1 = (cx - x2).toDouble()
+        diff2 = (cy - y2).toDouble()
+
+        val distance2 = Math.sqrt(diff1 * diff1 + diff2 * diff2)
+
+        return max(distance1, distance2).toFloat()
     }
 
     private fun getColorByQuality(quality: Quality): Int = when(quality) {
