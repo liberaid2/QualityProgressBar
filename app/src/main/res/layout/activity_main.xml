@@ -6,17 +6,29 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <TextView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:id="@+id/tvDummy"
+        android:text="Dummy text"
+        app:layout_constraintHeight_percent=".7"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/qualityProgressBar"/>
+
+
     <com.example.progressbar.QualityProgressBar
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:id="@+id/qualityProgressBar"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvDummy"
         app:layout_constraintBottom_toTopOf="@id/btnStart"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_margin="8dp"
         android:padding="8dp"
-        app:text="The very very very very very very large text"
+        app:text="A"
         app:totalAnimationDuration="2000"
         app:recolorAnimationDuration="200"
         app:strokeWidth="50dp"/>

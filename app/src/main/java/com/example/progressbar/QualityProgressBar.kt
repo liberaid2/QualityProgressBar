@@ -40,7 +40,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
             field = value
     }
 
-    var bgColor: Int = Color.WHITE
+    var holeColor: Int = Color.WHITE
     set(value) {
         field = value
         invalidate()
@@ -112,7 +112,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
                 strokeWidth = getDimension(R.styleable.QualityProgressBar_strokeWidth, 25f)
                 totalAnimationDuration = getInteger(R.styleable.QualityProgressBar_totalAnimationDuration, 10000).toLong()
                 recolorAnimationDuration = getInteger(R.styleable.QualityProgressBar_recolorAnimationDuration, 500).toLong()
-                bgColor = getColor(R.styleable.QualityProgressBar_bgColor, Color.WHITE)
+                holeColor = getColor(R.styleable.QualityProgressBar_holeColor, Color.WHITE)
                 textPaint.color = getColor(R.styleable.QualityProgressBar_textColor, Color.DKGRAY)
                 text = getString(R.styleable.QualityProgressBar_text) ?: ""
                 colorGood = getColor(R.styleable.QualityProgressBar_colorGood, Color.GREEN)
@@ -124,7 +124,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
             }
         }
 
-        eraser.color = bgColor
+        eraser.color = holeColor
     }
 
     /**
@@ -193,30 +193,23 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        val mw = MeasureSpec.getSize(widthMeasureSpec)
+        val mh = MeasureSpec.getSize(heightMeasureSpec)
 
-        val xPad = paddingLeft + paddingRight
-        val yPad = paddingTop + paddingBottom
-        val width = measuredWidth - xPad
-        val height = measuredHeight - yPad
-
-        val size = if(width < height) width else height
-        setMeasuredDimension(size + xPad, size + yPad)
-    }
-
-    override fun onDraw(canvas: Canvas?) {
-        val minSide = min(width, height)
+        val minSide = min(mw, mh)
 
         /* Calculate workspace square */
         val side = minSide.toFloat()
         val (x, y) = if(minSide == width) {
-            0f to (height / 2f - side / 2)
-        } else (width / 2f - side / 2) to 0f
+            0f to (mh / 2f - side / 2)
+        } else (mw / 2f - side / 2) to 0f
 
         drawRect.set(x + marginStart + paddingStart, y + marginTop + paddingTop, x + side - marginEnd - paddingEnd, y + side - marginBottom - paddingBottom)
 
-        /* Clear canvas */
-        canvas?.drawColor(Color.WHITE)
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+    }
+
+    override fun onDraw(canvas: Canvas?) {
 
         paint.color = colorUnspecified
         paint.apply {
@@ -233,11 +226,15 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
             }
         }
 
+        val side = drawRect.right - drawRect.left + marginEnd + paddingEnd + marginStart + paddingStart
+        val x = drawRect.left - marginStart - paddingStart
+        val y = drawRect.top - marginTop - paddingTop
+
         /* Clear center circle */
         canvas?.drawCircle(x + side / 2f, y + side / 2f, side / 2f - strokeWidth, eraser)
 
         if(!calculatedTextSize)
-            calculateTextSize(x, y)
+            calculateTextSize(x, y, side)
 
         canvas?.drawText(text, x + side / 2f - textBounds.width() / 2, y + side / 2f + textBounds.height() / 2, textPaint)
     }
@@ -249,10 +246,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
      * @param x - x-center of progress circle
      * @param y - y-center of progress circle
      * */
-    private fun calculateTextSize(x: Float, y: Float){
-        val offset = 20f
-        val targetWidth = min(width, height)
-
+    private fun calculateTextSize(x: Float, y: Float, targetWidth: Float){
         var lastTextSize = 10000f
         textPaint.textSize = 1000f
 
@@ -267,7 +261,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
             /* (x2, y2) - right-bottom corner of textBounds rect in canvas coordinates */
             /* diff - the farthest distance between textBounds corners and progress circle */
             diff = calculateMaxRadius(x1, y1, x1 + textBounds.width(), y1 - textBounds.height(),
-                x + targetWidth / 2f, y + targetWidth / 2f) - (targetWidth / 2f - strokeWidth) + offset
+                x + targetWidth / 2f, y + targetWidth / 2f) - (targetWidth / 2f - strokeWidth)
 
             /* Binary-search approach */
             if(diff > 0f){

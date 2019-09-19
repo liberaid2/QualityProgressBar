@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <declare-styleable name="QualityProgressBar">
-        <attr name="bgColor" format="color"/>
+        <attr name="holeColor" format="color"/>
         <attr name="strokeWidth" format="dimension"/>
         <attr name="totalAnimationDuration" format="integer"/>
         <attr name="recolorAnimationDuration" format="integer"/>
