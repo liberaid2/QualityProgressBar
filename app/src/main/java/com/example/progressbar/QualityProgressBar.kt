@@ -36,13 +36,6 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
             field = value
     }
 
-    var holeColor: Int = Color.WHITE
-    set(value) {
-        field = value
-        invalidate()
-        requestLayout()
-    }
-
     var text = ""
     set(value) {
         field = value
@@ -79,15 +72,32 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         requestLayout()
     }
 
+    var colorStroke: Int = 0
+    set(value) {
+        field = value
+        invalidate()
+    }
+
+    var idleStrokeWidth = 8f
+    set(value) {
+        field = value
+        idleStrokePaint.strokeWidth = value
+        updateArcRect()
+        invalidate()
+    }
+
     /* Everything is inside this rectangle */
     private val drawRect = RectF()
     private var sweepAngle = 0f
+    private val arcRect = RectF()
 
-    /* Erases hole in center of arcs */
-    private val eraser = Paint()
     private val paint = Paint().apply {
         style = Paint.Style.STROKE
         strokeWidth = this@QualityProgressBar.strokeWidth
+    }
+    private val idleStrokePaint = Paint().apply {
+        style = Paint.Style.STROKE
+        strokeWidth = idleStrokeWidth
     }
     private val textPaint = Paint()
     private val textBounds = Rect()
@@ -108,25 +118,26 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
                 strokeWidth = getDimension(R.styleable.QualityProgressBar_strokeWidth, 25f)
                 totalAnimationDuration = getInteger(R.styleable.QualityProgressBar_totalAnimationDuration, 10000).toLong()
                 recolorAnimationDuration = getInteger(R.styleable.QualityProgressBar_recolorAnimationDuration, 500).toLong()
-                holeColor = getColor(R.styleable.QualityProgressBar_holeColor, Color.WHITE)
                 textPaint.color = getColor(R.styleable.QualityProgressBar_textColor, Color.DKGRAY)
                 text = getString(R.styleable.QualityProgressBar_text) ?: ""
                 colorGood = getColor(R.styleable.QualityProgressBar_colorGood, Color.GREEN)
                 colorMedium = getColor(R.styleable.QualityProgressBar_colorMedium, Color.YELLOW)
                 colorBad = getColor(R.styleable.QualityProgressBar_colorBad, Color.RED)
                 colorUnspecified = getColor(R.styleable.QualityProgressBar_colorUnspecified, Color.GRAY)
+                colorStroke = getColor(R.styleable.QualityProgressBar_colorStroke, Color.LTGRAY)
+                idleStrokeWidth = getDimension(R.styleable.QualityProgressBar_idleStrokeWidth, 8f)
             } finally {
                 recycle()
             }
         }
 
-        eraser.color = holeColor
+        idleStrokePaint.color = colorStroke
     }
 
     /**
      * Starts animation of progressBar, cancels previous animation if needed
      * */
-    fun animateArc() {
+    fun animateProgress() {
         /* Cancel previous animation, setup default parameters */
         qualityAnimators.forEach { it.second.cancel() }
         qualityAnimators.clear()
@@ -201,16 +212,21 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         } else (mw / 2f - side / 2) to 0f
 
         drawRect.set(x + paddingStart, y + paddingTop, x + side - paddingEnd, y + side - paddingBottom)
+        updateArcRect()
 
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
 
     override fun onDraw(canvas: Canvas?) {
+        canvas ?: return
 
-        paint.color = colorUnspecified
+        drawIdleStroke(canvas)
+
         paint.apply {
+            color = colorUnspecified
             style = Paint.Style.STROKE
             strokeCap = Paint.Cap.ROUND
+            strokeWidth = this@QualityProgressBar.strokeWidth
         }
 
         /* Draw arcs */
@@ -218,21 +234,38 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
             val diff = sweepAngle - arc.startDeg
             if(diff > 0){
                 arc.sweepAngle = diff
-                arc.draw(drawRect, canvas)
+                arc.draw(arcRect, canvas)
             }
         }
 
         val side = drawRect.right - drawRect.left + paddingEnd + paddingStart
         val x = drawRect.left - paddingStart
         val y = drawRect.top - paddingTop
-
-        /* Clear center circle */
-        canvas?.drawCircle(x + side / 2f, y + side / 2f, side / 2f - strokeWidth, eraser)
+        val radius = side / 2f
 
         if(!calculatedTextSize)
-            calculateTextSize(x, y, side)
+            calculateTextSize(x, y, max(side - idleStrokeWidth * 2f, 0f))
 
-        canvas?.drawText(text, x + side / 2f - textBounds.width() / 2, y + side / 2f + textBounds.height() / 2, textPaint)
+        canvas.drawText(text, x + radius - textBounds.width() / 2, y + radius + textBounds.height() / 2, textPaint)
+    }
+
+    private fun drawIdleStroke(canvas: Canvas) {
+        val side = drawRect.right - drawRect.left + paddingEnd + paddingStart
+        val x = drawRect.left - paddingStart
+        val y = drawRect.top - paddingTop
+        val radius = side / 2f
+
+        val outerRadius = radius - idleStrokeWidth
+        if(outerRadius < 0f)
+            return
+
+        canvas.drawCircle(x + radius, y + radius, outerRadius, idleStrokePaint)
+
+        val innerRadius = outerRadius - strokeWidth + idleStrokeWidth * 2f
+        if(innerRadius < 0f)
+            return
+
+        canvas.drawCircle(x + radius, y + radius, innerRadius, idleStrokePaint)
     }
 
     /**
@@ -241,6 +274,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
      *
      * @param x - x-center of progress circle
      * @param y - y-center of progress circle
+     * @param targetWidth - target width (also height since its square) for text
      * */
     private fun calculateTextSize(x: Float, y: Float, targetWidth: Float){
         var lastTextSize = 10000f
@@ -294,6 +328,16 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         Quality.UNSPECIFIED -> colorUnspecified
     }
 
+    private fun updateArcRect(){
+        arcRect.apply {
+            set(drawRect)
+            left += strokeWidth / 2f
+            top += strokeWidth / 2f
+            right -= strokeWidth / 2f
+            bottom -= strokeWidth / 2f
+        }
+    }
+
     private data class ColoredArc(val fromDeg: Int, val toDeg: Int)
 
     enum class Quality{GOOD, MEDIUM, BAD, UNSPECIFIED}
@@ -308,9 +352,9 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
             else field = value
         }
 
-        fun draw(rect: RectF, canvas: Canvas?){
+        fun draw(rect: RectF, canvas: Canvas){
             paint.color = color
-            canvas?.drawArc(rect, startDeg, sweepAngle, true, paint)
+            canvas.drawArc(rect, startDeg, sweepAngle, false, paint)
         }
     }
 

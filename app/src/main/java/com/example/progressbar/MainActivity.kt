@@ -16,7 +16,7 @@ class MainActivity : AppCompatActivity() {
         btnStart.setOnClickListener {
             job?.cancel()
             job = GlobalScope.launch(Dispatchers.Main) {
-                qualityProgressBar.animateArc()
+                qualityProgressBar.animateProgress()
                 var currentColor = 0
                 val times = 10
                 val step = qualityProgressBar.totalAnimationDuration / times

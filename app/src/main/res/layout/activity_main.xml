@@ -26,12 +26,11 @@
         app:layout_constraintBottom_toTopOf="@id/btnStart"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_margin="8dp"
-        android:padding="8dp"
         app:text="A"
         app:totalAnimationDuration="2000"
         app:recolorAnimationDuration="200"
-        app:strokeWidth="50dp"/>
+        app:strokeWidth="16dp"
+        app:idleStrokeWidth="1dp"/>
 
     <Button
         android:layout_width="match_parent"
