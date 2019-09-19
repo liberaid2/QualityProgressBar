@@ -9,10 +9,6 @@ import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.LinearInterpolator
 import androidx.core.animation.addListener
-import androidx.core.view.marginBottom
-import androidx.core.view.marginEnd
-import androidx.core.view.marginStart
-import androidx.core.view.marginTop
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -204,7 +200,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
             0f to (mh / 2f - side / 2)
         } else (mw / 2f - side / 2) to 0f
 
-        drawRect.set(x + marginStart + paddingStart, y + marginTop + paddingTop, x + side - marginEnd - paddingEnd, y + side - marginBottom - paddingBottom)
+        drawRect.set(x + paddingStart, y + paddingTop, x + side - paddingEnd, y + side - paddingBottom)
 
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
@@ -226,9 +222,9 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
             }
         }
 
-        val side = drawRect.right - drawRect.left + marginEnd + paddingEnd + marginStart + paddingStart
-        val x = drawRect.left - marginStart - paddingStart
-        val y = drawRect.top - marginTop - paddingTop
+        val side = drawRect.right - drawRect.left + paddingEnd + paddingStart
+        val x = drawRect.left - paddingStart
+        val y = drawRect.top - paddingTop
 
         /* Clear center circle */
         canvas?.drawCircle(x + side / 2f, y + side / 2f, side / 2f - strokeWidth, eraser)
