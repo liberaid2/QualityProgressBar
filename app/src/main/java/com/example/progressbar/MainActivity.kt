@@ -1,5 +1,6 @@
 package com.example.progressbar
 
+import android.graphics.Color
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
@@ -17,12 +18,11 @@ class MainActivity : AppCompatActivity() {
             job?.cancel()
             job = GlobalScope.launch(Dispatchers.Main) {
                 qualityProgressBar.animateProgress()
-                var currentColor = 0
                 val times = 10
                 val step = qualityProgressBar.totalAnimationDuration / times
                 repeat(times){
                     delay(step)
-                    qualityProgressBar.setQualityMillis(it * step, (it + 1) * step, QualityProgressBar.Quality.values()[currentColor++ % 3])
+                    qualityProgressBar.setColorMillis(it * step, (it + 1) * step, Color.CYAN)
                 }
             }
         }

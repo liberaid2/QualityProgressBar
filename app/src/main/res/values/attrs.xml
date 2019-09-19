@@ -6,9 +6,6 @@
         <attr name="recolorAnimationDuration" format="integer"/>
         <attr name="text" format="string"/>
         <attr name="textColor" format="color"/>
-        <attr name="colorGood" format="color"/>
-        <attr name="colorMedium" format="color"/>
-        <attr name="colorBad" format="color"/>
         <attr name="colorUnspecified" format="color"/>
         <attr name="colorStroke" format="color"/>
         <attr name="idleStrokeWidth" format="dimension"/>
