@@ -5,6 +5,7 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.LinearInterpolator
@@ -183,7 +184,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
 
         /* Calculate workspace square */
         val side = minSide.toFloat()
-        val (x, y) = if(minSide == width) {
+        val (x, y) = if(minSide == mw) {
             0f to (mh / 2f - side / 2)
         } else (mw / 2f - side / 2) to 0f
 
@@ -219,9 +220,9 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         val radius = side / 2f
 
         if(!calculatedTextSize)
-            calculateTextSize(x, y, max(side - idleStrokeWidth * 2f, 0f))
+            calculateTextSize(x, y, radius)
 
-        canvas.drawText(text, x + radius - textBounds.width() / 2, y + radius + textBounds.height() / 2, textPaint)
+        canvas.drawText(text, x + radius - textBounds.width() / 2f, y + radius + textBounds.height() / 2f, textPaint)
     }
 
     private fun drawIdleStroke(canvas: Canvas) {
@@ -230,13 +231,13 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         val y = drawRect.top - paddingTop
         val radius = side / 2f
 
-        val outerRadius = radius - idleStrokeWidth
+        val outerRadius = radius - idleStrokeWidth / 2f
         if(outerRadius < 0f)
             return
 
         canvas.drawCircle(x + radius, y + radius, outerRadius, idleStrokePaint)
 
-        val innerRadius = outerRadius - strokeWidth + idleStrokeWidth * 2f
+        val innerRadius = outerRadius - strokeWidth + idleStrokeWidth
         if(innerRadius < 0f)
             return
 
@@ -266,7 +267,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
             /* (x2, y2) - right-bottom corner of textBounds rect in canvas coordinates */
             /* diff - the farthest distance between textBounds corners and progress circle */
             diff = calculateMaxRadius(x1, y1, x1 + textBounds.width(), y1 - textBounds.height(),
-                x + targetWidth / 2f, y + targetWidth / 2f) - (targetWidth / 2f - strokeWidth)
+                x + targetWidth / 2f, y + targetWidth / 2f) - (targetWidth - strokeWidth)
 
             /* Binary-search approach */
             if(diff > 0f){
