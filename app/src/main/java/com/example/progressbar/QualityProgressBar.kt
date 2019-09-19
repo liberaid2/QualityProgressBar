@@ -225,7 +225,6 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         paint.apply {
             color = colorUnspecified
             style = Paint.Style.STROKE
-            strokeCap = Paint.Cap.ROUND
             strokeWidth = this@QualityProgressBar.strokeWidth
         }
 
