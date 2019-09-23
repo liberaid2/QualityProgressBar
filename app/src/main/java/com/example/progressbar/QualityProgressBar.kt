@@ -5,11 +5,11 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
-import android.util.Log
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.LinearInterpolator
 import androidx.core.animation.addListener
+import androidx.core.content.ContextCompat
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -45,6 +45,13 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         requestLayout()
     }
 
+    var textColor = 0
+    set(value) {
+        field = value
+        textPaint.color = value
+        invalidate()
+    }
+
     var colorUnspecified: Int = Color.GRAY
     set(value) {
         field = value
@@ -65,6 +72,14 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         updateArcRect()
         invalidate()
     }
+
+    var maxTextSize = 0f
+    set(value) {
+        field = value * resources.displayMetrics.scaledDensity
+        calculatedTextSize = false
+        invalidate()
+    }
+    get() = field / resources.displayMetrics.scaledDensity
 
     /* Everything is inside this rectangle */
     private val drawRect = RectF()
@@ -98,8 +113,9 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
                 strokeWidth = getDimension(R.styleable.QualityProgressBar_strokeWidth, 25f)
                 totalAnimationDuration = getInteger(R.styleable.QualityProgressBar_totalAnimationDuration, 10000).toLong()
                 recolorAnimationDuration = getInteger(R.styleable.QualityProgressBar_recolorAnimationDuration, 500).toLong()
-                textPaint.color = getColor(R.styleable.QualityProgressBar_textColor, Color.DKGRAY)
                 text = getString(R.styleable.QualityProgressBar_text) ?: ""
+                textColor = getColor(R.styleable.QualityProgressBar_textColor, Color.DKGRAY)
+                maxTextSize = getDimension(R.styleable.QualityProgressBar_maxTextSize, 0f)
                 colorUnspecified = getColor(R.styleable.QualityProgressBar_colorUnspecified, Color.GRAY)
                 colorStroke = getColor(R.styleable.QualityProgressBar_colorStroke, Color.LTGRAY)
                 idleStrokeWidth = getDimension(R.styleable.QualityProgressBar_idleStrokeWidth, 8f)
@@ -139,7 +155,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         }
     }
 
-    fun setColorSec(fromSec: Int, toSec: Long, color: Int) = setColorMillis(fromSec * 1000L, toSec * 1000L, color)
+    fun setColorSec(fromSec: Int, toSec: Int, color: Int) = setColorMillis(fromSec * 1000L, toSec * 1000L, color)
 
     fun setColorMillis(fromMillis: Long, toMillis: Long, color: Int): Boolean {
         val fromDeg = (fromMillis.toFloat() / totalAnimationDuration * 360f).toInt()
@@ -175,6 +191,10 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
 
         return true
     }
+
+    fun setColorFromResSec(fromSec: Int, toSec: Int, colorId: Int) = setColorFromResMillis(fromSec * 1000L, toSec * 1000L, colorId)
+    fun setColorFromResMillis(fromMillis: Long, toMillis: Long, colorId: Int) = setColorMillis(fromMillis, toMillis, ContextCompat.getColor(context, colorId))
+    fun setColorFromResDeg(fromDeg: Int, toDeg: Int, colorId: Int) = setColorDeg(fromDeg, toDeg, ContextCompat.getColor(context, colorId))
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val mw = MeasureSpec.getSize(widthMeasureSpec)
@@ -279,6 +299,11 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
                 lastTextSize = current
             }
         } while(diff > 0f || diff < -10f)
+
+        if(maxTextSize > 0 && textPaint.textSize > maxTextSize) {
+            textPaint.textSize = maxTextSize
+            textPaint.getTextBounds(text, 0, text.length, textBounds)
+        }
 
         calculatedTextSize = true
     }

@@ -16,6 +16,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:text="00:00"
+        app:maxTextSize="16sp"
         app:totalAnimationDuration="2000"
         app:recolorAnimationDuration="200"
         app:strokeWidth="32dp"
