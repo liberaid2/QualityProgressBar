@@ -22,7 +22,7 @@ class MainActivity : AppCompatActivity() {
                 val step = qualityProgressBar.totalAnimationDuration / times
                 repeat(times){
                     delay(step)
-                    qualityProgressBar.setColorMillis(it * step, (it + 1) * step, Color.CYAN)
+                    qualityProgressBar.setColorFromResMillis(it * step, (it + 1) * step, R.color.colorPrimary)
                 }
             }
         }
