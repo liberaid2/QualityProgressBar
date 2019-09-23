@@ -7,6 +7,7 @@
         <attr name="text" format="string"/>
         <attr name="textColor" format="color"/>
         <attr name="maxTextSize" format="dimension"/>
+        <attr name="rotation" format="integer"/>
         <attr name="colorUnspecified" format="color"/>
         <attr name="colorStroke" format="color"/>
         <attr name="idleStrokeWidth" format="dimension"/>

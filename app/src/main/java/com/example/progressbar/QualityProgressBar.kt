@@ -81,6 +81,12 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
     }
     get() = field / resources.displayMetrics.scaledDensity
 
+    var rotation = 0
+    set(value) {
+        field = value % 360
+        invalidate()
+    }
+
     /* Everything is inside this rectangle */
     private val drawRect = RectF()
     private var sweepAngle = 0f
@@ -119,6 +125,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
                 colorUnspecified = getColor(R.styleable.QualityProgressBar_colorUnspecified, Color.GRAY)
                 colorStroke = getColor(R.styleable.QualityProgressBar_colorStroke, Color.LTGRAY)
                 idleStrokeWidth = getDimension(R.styleable.QualityProgressBar_idleStrokeWidth, 8f)
+                rotation = getInteger(R.styleable.QualityProgressBar_rotation, 0)
             } finally {
                 recycle()
             }
@@ -230,7 +237,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
             val diff = sweepAngle - arc.startDeg
             if(diff > 0){
                 arc.sweepAngle = diff
-                arc.draw(arcRect, canvas)
+                arc.draw(arcRect, rotation, canvas)
             }
         }
 
@@ -344,9 +351,9 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
             else field = value
         }
 
-        fun draw(rect: RectF, canvas: Canvas){
+        fun draw(rect: RectF, rotationOffset: Int, canvas: Canvas){
             paint.color = color
-            canvas.drawArc(rect, startDeg, sweepAngle, false, paint)
+            canvas.drawArc(rect, startDeg + rotationOffset, sweepAngle, false, paint)
         }
     }
 
