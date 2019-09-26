@@ -75,7 +75,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
 
     var maxTextSize = 0f
     set(value) {
-        field = value * resources.displayMetrics.scaledDensity
+        field = max(value, 0f) * resources.displayMetrics.scaledDensity
         calculatedTextSize = false
         invalidate()
     }
@@ -245,6 +245,9 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         val x = drawRect.left - paddingStart
         val y = drawRect.top - paddingTop
         val radius = side / 2f
+
+        if(text.isEmpty() || maxTextSize == 0f)
+            return
 
         if(!calculatedTextSize)
             calculateTextSize(x, y, radius)
