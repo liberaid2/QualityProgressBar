@@ -347,15 +347,16 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
     private class Arc(val startDeg: Float, val maxAngle: Float, val paint: Paint, var color: Int){
         var sweepAngle = 0f
         set(value){
-            if(value < 0f)
-                field = 0f
-            else if(value > maxAngle)
-                field = maxAngle
-            else field = value
+            field = when {
+                value < 0f -> 0f
+                value > maxAngle -> maxAngle
+                else -> value
+            }
         }
 
         fun draw(rect: RectF, rotationOffset: Int, canvas: Canvas){
             paint.color = color
+
             canvas.drawArc(rect, startDeg + rotationOffset, sweepAngle, false, paint)
         }
     }
