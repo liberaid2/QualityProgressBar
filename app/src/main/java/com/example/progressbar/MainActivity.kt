@@ -18,7 +18,7 @@ class MainActivity : AppCompatActivity() {
             job?.cancel()
             job = GlobalScope.launch(Dispatchers.Main) {
                 qualityProgressBar.clearColors()
-                val times = 10
+                /*val times = 10
                 val step = qualityProgressBar.totalAnimationDuration / times
                 repeat(times){
 //                    delay(step)
@@ -27,7 +27,7 @@ class MainActivity : AppCompatActivity() {
                         .setColorRes(this@MainActivity, R.color.colorPrimary)
                         .setAnimate(false)
                         .build())
-                }
+                }*/
                 qualityProgressBar.animateProgress()
             }
         }

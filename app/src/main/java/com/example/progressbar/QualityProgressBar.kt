@@ -105,15 +105,15 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
     private val textBounds = Rect()
 
     private val qualityAnimators = mutableListOf<Pair<ColoredArc, ValueAnimator>>()
-    private val arcs: List<Arc>
+    private val arcs: MutableList<Arc> = mutableListOf()
 
     private var progressAnimationEnded = false
     private var calculatedTextSize = false
 
     init {
-        arcs = (0 until MAX_ARCS).map {
-            Arc(it * ARC_STEP.toFloat(), ARC_STEP.toFloat(), paint, colorUnspecified)
-        }
+//        arcs = (0 until MAX_ARCS).map {
+//            Arc(it * ARC_STEP.toFloat(), ARC_STEP.toFloat(), paint, colorUnspecified)
+//        }
 
         context.theme.obtainStyledAttributes(attrs, R.styleable.QualityProgressBar, 0, 0).apply {
             try{
@@ -139,6 +139,10 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
      * Starts animation of progressBar, cancels previous animation if needed
      * */
     fun animateProgress() {
+
+        arcs.clear()
+        arcs.add(Arc(0f, 360f, paint, colorUnspecified))
+
         /* Cancel previous animation, setup default parameters */
         qualityAnimators.forEach { it.second.cancel() }
         qualityAnimators.clear()
@@ -180,6 +184,12 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
                 val range = coloredArc.fromDeg until coloredArc.toDeg
                 if (fromDeg in range || toDeg in range)
                     return false
+            }
+
+            var i = 0
+            while(i < arcs.size) {
+                if(toDeg < arcs[i].toDeg)
+                    break
             }
 
             /* Store animated arcs & valueAnimator of these arcs */
@@ -361,6 +371,9 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
                 else -> value
             }
         }
+
+        val toDeg: Float
+            get() = startDeg + maxAngle
 
         fun draw(rect: RectF, rotationOffset: Int, canvas: Canvas){
             paint.color = color

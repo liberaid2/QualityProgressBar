@@ -8,8 +8,8 @@
 
 
     <com.example.progressbar.QualityProgressBar
-        android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_width="360dp"
+        android:layout_height="604dp"
         android:id="@+id/qualityProgressBar"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/btnStart"
