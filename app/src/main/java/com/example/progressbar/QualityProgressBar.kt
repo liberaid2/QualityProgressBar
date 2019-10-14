@@ -7,6 +7,7 @@ import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
 import android.view.animation.DecelerateInterpolator
+import android.view.animation.Interpolator
 import android.view.animation.LinearInterpolator
 import androidx.core.animation.addListener
 import androidx.core.content.ContextCompat
@@ -141,7 +142,6 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         /* Cancel previous animation, setup default parameters */
         qualityAnimators.forEach { it.second.cancel() }
         qualityAnimators.clear()
-        arcs.forEach { it.color = colorUnspecified }
         progressAnimationEnded = false
 
         /* Animate sweepAngle */
@@ -162,46 +162,54 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         }
     }
 
-    fun setColorSec(fromSec: Int, toSec: Int, color: Int) = setColorMillis(fromSec * 1000L, toSec * 1000L, color)
+    fun setColor(info: RecolorInfo): Boolean {
+        val millisToDeg: (Long) -> Int = { (it.toFloat() / totalAnimationDuration * 360f).toInt() }
 
-    fun setColorMillis(fromMillis: Long, toMillis: Long, color: Int): Boolean {
-        val fromDeg = (fromMillis.toFloat() / totalAnimationDuration * 360f).toInt()
-        val toDeg = (toMillis.toFloat() / totalAnimationDuration * 360f).toInt()
+        val (fromDeg, toDeg) = when(info.type){
+            RecolorInfo.BoundariesType.DEGREES -> info.from.toInt() to info.to.toInt()
+            RecolorInfo.BoundariesType.MILLIS -> millisToDeg(info.from) to millisToDeg(info.to)
+            RecolorInfo.BoundariesType.SECONDS -> millisToDeg(info.from * 1000L) to millisToDeg(info.to * 1000L)
+        }
 
-        return setColorDeg(fromDeg, toDeg, color)
-    }
-
-    fun setColorDeg(fromDeg: Int, toDeg: Int, color: Int): Boolean {
         if(fromDeg < 0 || toDeg > 360)
             return false
 
-        /* Dont change quality color if target has already changed color */
-        qualityAnimators.forEach { (coloredArc, _) ->
-            val range = coloredArc.fromDeg until coloredArc.toDeg
-            if(fromDeg in range || toDeg in range)
-                return false
-        }
-
-        /* Store animated arcs & valueAnimator of these arcs */
-        qualityAnimators.add(ColoredArc(fromDeg, toDeg) to ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = recolorAnimationDuration
-            interpolator = DecelerateInterpolator()
-            addUpdateListener {
-                for(i in fromDeg until toDeg)
-                    arcs[i].color = argbEvaluator.evaluate(it.animatedFraction, colorUnspecified, color) as Int
-
-                if(progressAnimationEnded)
-                    invalidate()
+        if(info.animate) {
+            /* Dont change quality color if target has already changed color */
+            qualityAnimators.forEach { (coloredArc, _) ->
+                val range = coloredArc.fromDeg until coloredArc.toDeg
+                if (fromDeg in range || toDeg in range)
+                    return false
             }
-            start()
-        })
+
+            /* Store animated arcs & valueAnimator of these arcs */
+            qualityAnimators.add(ColoredArc(fromDeg, toDeg) to ValueAnimator.ofFloat(0f, 1f).apply {
+                duration = if (info.duration == 0L) recolorAnimationDuration else info.duration
+                interpolator = info.interpolator
+                addUpdateListener {
+                    for (i in fromDeg until toDeg)
+                        arcs[i].color = argbEvaluator.evaluate(
+                            it.animatedFraction,
+                            colorUnspecified,
+                            info.color
+                        ) as Int
+
+                    if (progressAnimationEnded)
+                        invalidate()
+                }
+                start()
+            })
+        }
+        else
+            for(i in fromDeg until toDeg)
+                arcs[i].color = info.color
 
         return true
     }
 
-    fun setColorFromResSec(fromSec: Int, toSec: Int, colorId: Int) = setColorFromResMillis(fromSec * 1000L, toSec * 1000L, colorId)
-    fun setColorFromResMillis(fromMillis: Long, toMillis: Long, colorId: Int) = setColorMillis(fromMillis, toMillis, ContextCompat.getColor(context, colorId))
-    fun setColorFromResDeg(fromDeg: Int, toDeg: Int, colorId: Int) = setColorDeg(fromDeg, toDeg, ContextCompat.getColor(context, colorId))
+    fun clearColors() {
+        arcs.forEach { it.color = colorUnspecified }
+    }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val mw = MeasureSpec.getSize(widthMeasureSpec)
@@ -359,6 +367,77 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
 
             canvas.drawArc(rect, startDeg + rotationOffset, sweepAngle, false, paint)
         }
+    }
+
+    class RecolorInfo internal constructor (val duration: Long = 0L, val interpolator: Interpolator = LinearInterpolator(), val color: Int = 0,
+                      val from: Long = 0L, val to: Long = 0L, val type: BoundariesType = BoundariesType.DEGREES,
+                      val animate: Boolean = true) {
+
+        enum class BoundariesType {
+            DEGREES,
+            MILLIS,
+            SECONDS
+        }
+    }
+
+    class RecolorInfoBuilder(){
+        private var duration: Long = 0
+        private var interpolator: Interpolator = DecelerateInterpolator()
+        private var animate: Boolean = true
+
+        private var color: Int = 0
+
+        private var from: Long = 0L
+        private var to: Long = 0L
+        private var type: RecolorInfo.BoundariesType = RecolorInfo.BoundariesType.DEGREES
+
+        fun setDuration(duration: Long): RecolorInfoBuilder {
+            this.duration = duration
+            return this
+        }
+
+        fun setInterpolator(interpolator: Interpolator): RecolorInfoBuilder {
+            this.interpolator = interpolator
+            return this
+        }
+
+        fun setAnimate(animate: Boolean): RecolorInfoBuilder {
+            this.animate = animate
+            return this
+        }
+
+        fun setColorInt(color: Int): RecolorInfoBuilder {
+            this.color = color
+            return this
+        }
+
+        fun setColorRes(context: Context, resId: Int): RecolorInfoBuilder {
+            color = ContextCompat.getColor(context, resId)
+            return this
+        }
+
+        fun setBoundariesDeg(fromDeg: Int, toDeg: Int): RecolorInfoBuilder {
+            from = fromDeg.toLong()
+            to = toDeg.toLong()
+            type = RecolorInfo.BoundariesType.DEGREES
+            return this
+        }
+
+        fun setBoundariesMillis(fromMillis: Long, toMillis: Long): RecolorInfoBuilder {
+            from = fromMillis
+            to = toMillis
+            type = RecolorInfo.BoundariesType.MILLIS
+            return this
+        }
+
+        fun setBoundariesSecs(fromSec: Int, toSec: Int): RecolorInfoBuilder {
+            from = fromSec.toLong()
+            to = toSec.toLong()
+            type = RecolorInfo.BoundariesType.SECONDS
+            return this
+        }
+
+        fun build() = RecolorInfo(duration, interpolator, color, from, to, type, animate)
     }
 
     companion object {

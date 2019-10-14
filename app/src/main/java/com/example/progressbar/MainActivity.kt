@@ -17,13 +17,18 @@ class MainActivity : AppCompatActivity() {
         btnStart.setOnClickListener {
             job?.cancel()
             job = GlobalScope.launch(Dispatchers.Main) {
-                qualityProgressBar.animateProgress()
+                qualityProgressBar.clearColors()
                 val times = 10
                 val step = qualityProgressBar.totalAnimationDuration / times
                 repeat(times){
-                    delay(step)
-                    qualityProgressBar.setColorFromResMillis(it * step, (it + 1) * step, R.color.colorPrimary)
+//                    delay(step)
+                    qualityProgressBar.setColor(QualityProgressBar.RecolorInfoBuilder()
+                        .setBoundariesMillis(it * step, (it + 1) * step)
+                        .setColorRes(this@MainActivity, R.color.colorPrimary)
+                        .setAnimate(false)
+                        .build())
                 }
+                qualityProgressBar.animateProgress()
             }
         }
     }
