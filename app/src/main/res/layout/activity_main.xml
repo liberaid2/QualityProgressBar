@@ -19,7 +19,7 @@
         app:maxTextSize="26sp"
         app:rotation="270"
         app:totalAnimationDuration="2000"
-        app:recolorAnimationDuration="200"
+        app:recolorAnimationDuration="1000"
         app:strokeWidth="32dp"
         app:idleStrokeWidth="2dp"/>
 

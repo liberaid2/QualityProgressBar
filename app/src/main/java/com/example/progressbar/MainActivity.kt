@@ -18,17 +18,30 @@ class MainActivity : AppCompatActivity() {
             job?.cancel()
             job = GlobalScope.launch(Dispatchers.Main) {
                 qualityProgressBar.clearColors()
-                /*val times = 10
+                qualityProgressBar.clearArcs()
+
+                val times = 5
                 val step = qualityProgressBar.totalAnimationDuration / times
                 repeat(times){
 //                    delay(step)
                     qualityProgressBar.setColor(QualityProgressBar.RecolorInfoBuilder()
                         .setBoundariesMillis(it * step, (it + 1) * step)
-                        .setColorRes(this@MainActivity, R.color.colorPrimary)
+                        .setColorRes(this@MainActivity, R.color.colorPrimaryDark)
                         .setAnimate(false)
                         .build())
-                }*/
+                }
                 qualityProgressBar.animateProgress()
+
+//                val times = 5
+//                val step = qualityProgressBar.totalAnimationDuration / times
+                repeat(times){
+                    delay(step)
+                    qualityProgressBar.setColor(QualityProgressBar.RecolorInfoBuilder()
+                        .setBoundariesMillis(it * step, (it + 1) * step)
+                        .setColorRes(this@MainActivity, if(it % 2 == 0) R.color.colorPrimary else R.color.colorAccent)
+                        .setAnimate(true)
+                        .build())
+                }
             }
         }
     }

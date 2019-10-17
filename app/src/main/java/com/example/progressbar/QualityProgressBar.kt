@@ -5,6 +5,7 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
+import android.util.Log
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.Interpolator
@@ -93,11 +94,11 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
     private var sweepAngle = 0f
     private val arcRect = RectF()
 
-    private val paint = Paint().apply {
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = this@QualityProgressBar.strokeWidth
     }
-    private val idleStrokePaint = Paint().apply {
+    private val idleStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = idleStrokeWidth
     }
@@ -111,10 +112,6 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
     private var calculatedTextSize = false
 
     init {
-//        arcs = (0 until MAX_ARCS).map {
-//            Arc(it * ARC_STEP.toFloat(), ARC_STEP.toFloat(), paint, colorUnspecified)
-//        }
-
         context.theme.obtainStyledAttributes(attrs, R.styleable.QualityProgressBar, 0, 0).apply {
             try{
                 strokeWidth = getDimension(R.styleable.QualityProgressBar_strokeWidth, 25f)
@@ -139,10 +136,6 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
      * Starts animation of progressBar, cancels previous animation if needed
      * */
     fun animateProgress() {
-
-        arcs.clear()
-        arcs.add(Arc(0f, 360f, paint, colorUnspecified))
-
         /* Cancel previous animation, setup default parameters */
         qualityAnimators.forEach { it.second.cancel() }
         qualityAnimators.clear()
@@ -175,7 +168,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
             RecolorInfo.BoundariesType.SECONDS -> millisToDeg(info.from * 1000L) to millisToDeg(info.to * 1000L)
         }
 
-        if(fromDeg < 0 || toDeg > 360)
+        if(fromDeg < 0 || toDeg > 360 || fromDeg == toDeg)
             return false
 
         if(info.animate) {
@@ -186,23 +179,30 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
                     return false
             }
 
-            var i = 0
-            while(i < arcs.size) {
-                if(toDeg < arcs[i].toDeg)
-                    break
-            }
+            val arcToAnimate = splitArcs(fromDeg, toDeg) ?: return false
+            Log.d("ARC_ANIMATION", "Animating: ${arcToAnimate.startDeg} ${arcToAnimate.toDeg} $arcToAnimate")
+
+            val baseColor = arcToAnimate.color
 
             /* Store animated arcs & valueAnimator of these arcs */
             qualityAnimators.add(ColoredArc(fromDeg, toDeg) to ValueAnimator.ofFloat(0f, 1f).apply {
                 duration = if (info.duration == 0L) recolorAnimationDuration else info.duration
                 interpolator = info.interpolator
                 addUpdateListener {
-                    for (i in fromDeg until toDeg)
-                        arcs[i].color = argbEvaluator.evaluate(
-                            it.animatedFraction,
-                            colorUnspecified,
-                            info.color
-                        ) as Int
+                    val arc = arcs.find {
+                        it.startDeg == fromDeg.toFloat() && it.toDeg == toDeg.toFloat()
+                    }
+
+                    if(arc == null){
+                        cancel()
+                        return@addUpdateListener
+                    }
+
+                    arc.color = argbEvaluator.evaluate(
+                        it.animatedFraction,
+                        baseColor,
+                        info.color
+                    ) as Int
 
                     if (progressAnimationEnded)
                         invalidate()
@@ -210,15 +210,68 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
                 start()
             })
         }
-        else
-            for(i in fromDeg until toDeg)
-                arcs[i].color = info.color
+        else {
+            if(arcs.isEmpty())
+                arcs.add(Arc(0f, 360f, paint, colorUnspecified))
+
+            val arcToRecolor = splitArcs(fromDeg, toDeg) ?: return false
+            arcToRecolor.color = info.color
+
+            Log.d("ARC_ANIMATION", "Coloring: ${arcToRecolor.startDeg} ${arcToRecolor.toDeg} $arcToRecolor")
+        }
 
         return true
     }
 
     fun clearColors() {
         arcs.forEach { it.color = colorUnspecified }
+        qualityAnimators.forEach { (_, animator) ->
+            animator.cancel()
+        }
+        qualityAnimators.clear()
+    }
+
+    fun clearArcs() {
+        arcs.clear()
+        arcs.add(Arc(0f, 360f, paint, colorUnspecified))
+    }
+
+    private fun splitArcs(fromDeg: Int, toDeg: Int): Arc? {
+        val exact = arcs.find { it.startDeg == fromDeg.toFloat() && it.toDeg == toDeg.toFloat() }
+        if(exact != null)
+            return exact
+
+        /* Make sure we don't have already colored arc between fromDeg and toDeg */
+        if(arcs.any {
+                val fromInArc = fromDeg >= it.startDeg && fromDeg < it.toDeg
+                val toInArc = toDeg > it.startDeg && fromDeg < it.toDeg
+
+                fromInArc && !toInArc || toInArc && !fromInArc
+            }) return null
+
+        val arcToSplit = arcs.find {
+            val fromInArc = fromDeg >= it.startDeg && fromDeg < it.toDeg
+            val toInArc = toDeg > it.startDeg && toDeg <= it.toDeg
+
+            fromInArc && toInArc
+        } ?: throw RuntimeException("Cannot find Arc (fromDeg=$fromDeg, toDeg=$toDeg)")
+
+        /* Add Arcs */
+        val newArcs = mutableListOf<Arc>()
+        if(fromDeg != arcToSplit.startDeg.toInt())
+            newArcs.add(Arc(arcToSplit.startDeg, fromDeg - arcToSplit.startDeg, paint, arcToSplit.color))
+
+        val arcToAnimate = Arc(fromDeg.toFloat(), (toDeg - fromDeg).toFloat(), paint, arcToSplit.color)
+        newArcs.add(arcToAnimate)
+
+        if(toDeg != arcToSplit.toDeg.toInt())
+            newArcs.add(Arc(toDeg.toFloat(), arcToSplit.toDeg - toDeg, paint, arcToSplit.color))
+
+        val indexToReplace = arcs.indexOf(arcToSplit)
+        arcs.removeAt(indexToReplace)
+        arcs.addAll(indexToReplace, newArcs)
+
+        return arcToAnimate
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -379,6 +432,10 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
             paint.color = color
 
             canvas.drawArc(rect, startDeg + rotationOffset, sweepAngle, false, paint)
+        }
+
+        override fun toString(): String {
+            return "start=$startDeg to=$toDeg color=$color"
         }
     }
 
