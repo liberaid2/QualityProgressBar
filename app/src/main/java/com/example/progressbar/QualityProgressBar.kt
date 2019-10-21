@@ -10,6 +10,8 @@ import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.Interpolator
 import android.view.animation.LinearInterpolator
+import androidx.annotation.ColorInt
+import androidx.annotation.ColorRes
 import androidx.core.animation.addListener
 import androidx.core.content.ContextCompat
 import kotlin.math.abs
@@ -439,9 +441,69 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         }
     }
 
-    class RecolorInfo internal constructor (val duration: Long = 0L, val interpolator: Interpolator = LinearInterpolator(), val color: Int = 0,
-                      val from: Long = 0L, val to: Long = 0L, val type: BoundariesType = BoundariesType.DEGREES,
-                      val animate: Boolean = true) {
+    class RecolorInfo (val duration: Long = 0L, val interpolator: Interpolator = LinearInterpolator(),
+                       @ColorInt val color: Int = 0, val from: Long = 0L, val to: Long = 0L,
+                       val type: BoundariesType = BoundariesType.DEGREES, val animate: Boolean = true) {
+
+        class Builder {
+            private var duration: Long = 0
+            private var interpolator: Interpolator = DecelerateInterpolator()
+            private var animate: Boolean = true
+
+            private var color: Int = 0
+
+            private var from: Long = 0L
+            private var to: Long = 0L
+            private var type: RecolorInfo.BoundariesType = RecolorInfo.BoundariesType.DEGREES
+
+            fun setDuration(duration: Long): Builder {
+                this.duration = duration
+                return this
+            }
+
+            fun setInterpolator(interpolator: Interpolator): Builder {
+                this.interpolator = interpolator
+                return this
+            }
+
+            fun setAnimate(animate: Boolean): Builder {
+                this.animate = animate
+                return this
+            }
+
+            fun setColorInt(@ColorInt color: Int): Builder {
+                this.color = color
+                return this
+            }
+
+            fun setColorRes(context: Context, @ColorRes resId: Int): Builder {
+                color = ContextCompat.getColor(context, resId)
+                return this
+            }
+
+            fun setBoundariesDeg(fromDeg: Int, toDeg: Int): Builder {
+                from = fromDeg.toLong()
+                to = toDeg.toLong()
+                type = RecolorInfo.BoundariesType.DEGREES
+                return this
+            }
+
+            fun setBoundariesMillis(fromMillis: Long, toMillis: Long): Builder {
+                from = fromMillis
+                to = toMillis
+                type = RecolorInfo.BoundariesType.MILLIS
+                return this
+            }
+
+            fun setBoundariesSecs(fromSec: Int, toSec: Int): Builder {
+                from = fromSec.toLong()
+                to = toSec.toLong()
+                type = RecolorInfo.BoundariesType.SECONDS
+                return this
+            }
+
+            fun build() = RecolorInfo(duration, interpolator, color, from, to, type, animate)
+        }
 
         enum class BoundariesType {
             DEGREES,
@@ -450,70 +512,7 @@ class QualityProgressBar(context: Context, attrs: AttributeSet) : View(context, 
         }
     }
 
-    class RecolorInfoBuilder(){
-        private var duration: Long = 0
-        private var interpolator: Interpolator = DecelerateInterpolator()
-        private var animate: Boolean = true
-
-        private var color: Int = 0
-
-        private var from: Long = 0L
-        private var to: Long = 0L
-        private var type: RecolorInfo.BoundariesType = RecolorInfo.BoundariesType.DEGREES
-
-        fun setDuration(duration: Long): RecolorInfoBuilder {
-            this.duration = duration
-            return this
-        }
-
-        fun setInterpolator(interpolator: Interpolator): RecolorInfoBuilder {
-            this.interpolator = interpolator
-            return this
-        }
-
-        fun setAnimate(animate: Boolean): RecolorInfoBuilder {
-            this.animate = animate
-            return this
-        }
-
-        fun setColorInt(color: Int): RecolorInfoBuilder {
-            this.color = color
-            return this
-        }
-
-        fun setColorRes(context: Context, resId: Int): RecolorInfoBuilder {
-            color = ContextCompat.getColor(context, resId)
-            return this
-        }
-
-        fun setBoundariesDeg(fromDeg: Int, toDeg: Int): RecolorInfoBuilder {
-            from = fromDeg.toLong()
-            to = toDeg.toLong()
-            type = RecolorInfo.BoundariesType.DEGREES
-            return this
-        }
-
-        fun setBoundariesMillis(fromMillis: Long, toMillis: Long): RecolorInfoBuilder {
-            from = fromMillis
-            to = toMillis
-            type = RecolorInfo.BoundariesType.MILLIS
-            return this
-        }
-
-        fun setBoundariesSecs(fromSec: Int, toSec: Int): RecolorInfoBuilder {
-            from = fromSec.toLong()
-            to = toSec.toLong()
-            type = RecolorInfo.BoundariesType.SECONDS
-            return this
-        }
-
-        fun build() = RecolorInfo(duration, interpolator, color, from, to, type, animate)
-    }
-
     companion object {
         private val argbEvaluator = ArgbEvaluator()
-
-        const val MAX_ARCS = 360
-        const val ARC_STEP = MAX_ARCS / 360
     }
 }

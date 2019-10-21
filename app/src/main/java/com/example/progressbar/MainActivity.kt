@@ -24,7 +24,7 @@ class MainActivity : AppCompatActivity() {
                 val step = qualityProgressBar.totalAnimationDuration / times
                 repeat(times){
 //                    delay(step)
-                    qualityProgressBar.setColor(QualityProgressBar.RecolorInfoBuilder()
+                    qualityProgressBar.setColor(QualityProgressBar.RecolorInfo.Builder()
                         .setBoundariesMillis(it * step, (it + 1) * step)
                         .setColorRes(this@MainActivity, R.color.colorPrimaryDark)
                         .setAnimate(false)
@@ -36,7 +36,7 @@ class MainActivity : AppCompatActivity() {
 //                val step = qualityProgressBar.totalAnimationDuration / times
                 repeat(times){
                     delay(step)
-                    qualityProgressBar.setColor(QualityProgressBar.RecolorInfoBuilder()
+                    qualityProgressBar.setColor(QualityProgressBar.RecolorInfo.Builder()
                         .setBoundariesMillis(it * step, (it + 1) * step)
                         .setColorRes(this@MainActivity, if(it % 2 == 0) R.color.colorPrimary else R.color.colorAccent)
                         .setAnimate(true)
